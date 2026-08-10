@@ -22,11 +22,17 @@ MODELS_DIR = Path(__file__).resolve().parents[1] / "models_store"
 
 def run(subset: str, models_dir: Path = MODELS_DIR) -> dict[str, float]:
     models_dir.mkdir(parents=True, exist_ok=True)
-    train_df, test_df, pipeline, _ = build_training_data(subset)
+    train_df, test_df, pipeline, data = build_training_data(subset)
     test_last = last_cycle_per_unit(test_df)
 
+    # Training target is the RUL-capped label (a standard loss-shaping trick -- see
+    # DEFAULT_RUL_CAP in engineering.py). Evaluation must use the true, uncapped RUL from
+    # RUL_*.txt: some test engines have true remaining life well past the cap (e.g. up to
+    # 194 cycles on FD002), and scoring against the capped label would silently hide those
+    # errors, understating RMSE/NASA score relative to the standard CMAPSS benchmark.
     X_train, y_train = train_df[pipeline.all_feature_cols], train_df["RUL"]
-    X_test, y_test = test_last[pipeline.all_feature_cols], test_last["RUL"]
+    X_test = test_last[pipeline.all_feature_cols]
+    y_test = test_last["unit_number"].map(data.rul_truth)
 
     with mlflow.start_run(run_name=f"xgboost_{subset}"):
         mlflow.log_params({**DEFAULT_PARAMS, "subset": subset, "rul_cap": pipeline.rul_cap})

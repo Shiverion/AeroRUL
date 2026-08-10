@@ -193,6 +193,28 @@ body {
   color: var(--critical);
 }
 
+.panel-title {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.champion-tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-family: var(--sans);
+  font-weight: 600;
+  text-transform: uppercase;
+  background: rgba(95, 208, 255, 0.15);
+  color: #5fd0ff;
+}
+
 .fleet-table {
   width: 100%;
   border-collapse: collapse;
@@ -305,6 +327,10 @@ body {
   font-size: 11px;
   color: var(--text-muted);
   text-transform: uppercase;
+}
+
+.engine-summary-stats .mono-small {
+  font-size: 15px;
 }
 
 .recommendation-banner {

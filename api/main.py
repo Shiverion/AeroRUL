@@ -10,7 +10,13 @@ import pandas as pd
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.inference import ModelRegistry, engine_history, fleet_summary, predict_from_readings
+from api.inference import (
+    ModelRegistry,
+    engine_history,
+    fleet_summary,
+    model_comparison,
+    predict_from_readings,
+)
 from api.schemas import EngineHistory, FleetEngineSummary, MaintenancePrediction, PredictRequest
 
 app = FastAPI(
@@ -58,3 +64,18 @@ def engine_endpoint(subset: str, unit_number: int) -> EngineHistory:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.get("/models/{subset}")
+def models_endpoint(subset: str) -> dict:
+    """The model-comparison leaderboard for a subset: every architecture's test metrics and
+    which one was picked as the deployed champion. None if scripts/compare_models.py hasn't
+    been run for this subset yet.
+    """
+    comparison = model_comparison(subset)
+    if comparison is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No model comparison found for {subset}. Run scripts/compare_models.py.",
+        )
+    return comparison

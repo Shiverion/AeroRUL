@@ -51,17 +51,23 @@ class MaintenancePrediction(BaseModel):
     unit_number: int
     latest_cycle: int
     predicted_rul: float
+    predicted_rul_lower: float | None = None
+    predicted_rul_upper: float | None = None
     risk_tier: str
     recommendation: str
+    model_used: str
 
 
 class FleetEngineSummary(BaseModel):
     unit_number: int
     latest_cycle: int
     predicted_rul: float
+    predicted_rul_lower: float | None = None
+    predicted_rul_upper: float | None = None
     true_rul: float | None = None
     risk_tier: str
     recommendation: str
+    model_used: str
 
 
 class EngineHistory(BaseModel):
@@ -70,6 +76,9 @@ class EngineHistory(BaseModel):
     cycles: list[int]
     sensors: dict[str, list[float]]
     predicted_rul: float
+    predicted_rul_lower: float | None = None
+    predicted_rul_upper: float | None = None
     true_rul: float | None = None
     risk_tier: str
     recommendation: str
+    model_used: str

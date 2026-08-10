@@ -26,6 +26,9 @@ api = [
 dl = [
     "torch>=2.4",
 ]
+survival = [
+    "lifelines>=0.29",
+]
 dev = [
     "pytest>=8.3",
     "ruff>=0.6",

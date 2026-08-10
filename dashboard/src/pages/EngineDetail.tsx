@@ -86,8 +86,20 @@ export function EngineDetail({ subset }: { subset: string }) {
             <span className="stat-label">predicted RUL</span>
           </div>
           <div>
+            <span className="stat-value">
+              {engine.predicted_rul_lower != null && engine.predicted_rul_upper != null
+                ? `${engine.predicted_rul_lower.toFixed(0)}–${engine.predicted_rul_upper.toFixed(0)}`
+                : "—"}
+            </span>
+            <span className="stat-label">90% interval</span>
+          </div>
+          <div>
             <span className="stat-value">{engine.true_rul ?? "—"}</span>
             <span className="stat-label">true RUL</span>
+          </div>
+          <div>
+            <span className="stat-value mono-small">{engine.model_used}</span>
+            <span className="stat-label">model</span>
           </div>
           <RiskBadge tier={engine.risk_tier} />
         </div>
