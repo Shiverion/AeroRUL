@@ -29,6 +29,11 @@ dl = [
 survival = [
     "lifelines>=0.29",
 ]
+notebooks = [
+    "jupyter>=1.1",
+    "nbconvert>=7.16",
+    "ipykernel>=6.29",
+]
 dev = [
     "pytest>=8.3",
     "ruff>=0.6",
