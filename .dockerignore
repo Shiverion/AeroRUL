@@ -1,0 +1,11 @@
+.venv
+__pycache__
+*.pyc
+.pytest_cache
+.ruff_cache
+mlruns
+mlartifacts
+data/processed
+dashboard/node_modules
+dashboard/dist
+.git

@@ -1,0 +1,34 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+
+# data (raw + processed are large / regenerable — keep a README instead)
+data/raw/*.txt
+data/processed/
+!data/raw/.gitkeep
+
+# models / experiment tracking
+models_store/*.joblib
+models_store/*.pt
+mlruns/
+mlartifacts/
+mlflow.db
+
+# node / react
+dashboard/node_modules/
+dashboard/dist/
+dashboard/.env
+
+# env / secrets
+.env
+*.local
+
+# OS
+.DS_Store
+Thumbs.db
