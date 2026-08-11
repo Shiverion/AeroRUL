@@ -196,8 +196,17 @@ npm run dev          # http://localhost:5173, expects the API at http://localhos
 
 ### Everything via Docker
 
+The API image bakes `models_store/` and `data/raw/` in at build time, so it's fully
+self-contained -- no volumes needed at deploy time, just train once beforehand:
+
 ```bash
-uv run python scripts/train.py --subset all   # models_store/ must be populated before building
+scripts/download_data.sh
+uv run python scripts/train.py --subset all
+uv run python scripts/train_sequence.py --subset all --model all
+uv run python scripts/train_survival.py --subset all
+uv run python scripts/calibrate_uncertainty.py --subset all
+uv run python scripts/compare_models.py --subset all
+
 docker compose up --build
 ```
 API on http://localhost:8000, dashboard on http://localhost:5173.
