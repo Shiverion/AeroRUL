@@ -130,8 +130,10 @@ src/aerorul/
   evaluation/    RMSE + NASA asymmetric scoring function
   uncertainty/   split conformal prediction intervals
 api/             FastAPI service (predict / fleet / engine / models / health)
-dashboard/       React fleet-health dashboard (risk tiers, uncertainty bands, sensor trends)
-scripts/         data download, training (per model type), comparison, evaluation
+dashboard/       React fleet-health dashboard -- runs backend-free (public/data/ JSON
+                 snapshots) or against the live API, same codebase either way
+scripts/         data download, training (per model type), comparison, evaluation,
+                 static-data export for the backend-free dashboard build
 notebooks/       the five notebooks above
 data/            raw + processed CMAPSS data (gitignored, see data/README.md)
 models_store/    trained model artifacts + champion.json (gitignored except champion.json)
@@ -191,7 +193,7 @@ uv run jupyter lab notebooks/
 ```bash
 cd dashboard
 npm install
-npm run dev          # http://localhost:5173, expects the API at http://localhost:8000
+npm run dev          # http://localhost:5173, defaults to the API at http://localhost:8000
 ```
 
 ### Everything via Docker
@@ -210,6 +212,32 @@ uv run python scripts/compare_models.py --subset all
 docker compose up --build
 ```
 API on http://localhost:8000, dashboard on http://localhost:5173.
+
+## Deployment
+
+The dashboard runs two ways from the same codebase, chosen automatically at build time by
+whether `VITE_API_BASE` is set:
+
+**Backend-free (static)** -- `/fleet`, `/engine`, and `/models` are all just predictions
+over the fixed CMAPSS test set, computed once, so there's nothing genuinely "live" about
+them. `scripts/export_static_data.py` freezes that data to JSON under
+`dashboard/public/data/` (already committed, ~19MB across ~700 files -- one per engine, so
+loading the fleet view doesn't pull in every engine's full sensor history at once); a
+production build (`npm run build`) with no `VITE_API_BASE` configured reads those files
+directly. Deploy `dashboard/` to Vercel (or Netlify, or any static host) with zero backend
+involved:
+
+```bash
+uv run python scripts/export_static_data.py --subset all   # regenerate after retraining
+```
+Then point Vercel at the `dashboard/` directory (framework preset: Vite) and deploy. The
+only thing this mode can't do is `POST /predict` (live inference on arbitrary sensor
+readings) -- the dashboard UI doesn't call that endpoint, so nothing is lost in practice.
+
+**Live API** -- set `VITE_API_BASE` to a deployed FastAPI instance (see `api/Dockerfile`;
+Render or Fly.io are natural fits since both run the Dockerfile directly) and the dashboard
+build hits it for real. Both configurations ship in this repo; which one a given deployment
+uses is a single build-time environment variable, not a code fork.
 
 ## What's next
 

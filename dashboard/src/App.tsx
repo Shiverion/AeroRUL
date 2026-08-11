@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { HashRouter, Link, Route, Routes, useLocation } from "react-router-dom";
-import { api } from "./api";
+import { api, mode } from "./api";
 import { EngineDetail } from "./pages/EngineDetail";
 import { FleetOverview } from "./pages/FleetOverview";
 import { ModelComparisonPage } from "./pages/ModelComparison";
@@ -50,6 +50,12 @@ function AboutPanel() {
           Split conformal prediction: a distribution-free 90% coverage guarantee around the
           point estimate, calibrated on held-out engines. Wider isn't worse — it's honest
           about where the model is less certain.
+        </div>
+        <div>
+          <h4>About this demo</h4>
+          {mode === "static"
+            ? "Running in static mode: predictions are precomputed JSON snapshots over the fixed CMAPSS test set, no backend required. The FastAPI service behind these same predictions is in the repo — clone it and set VITE_API_BASE to run live."
+            : "Connected to a live FastAPI backend serving these predictions in real time from the trained model artifacts."}
         </div>
       </div>
     </div>
@@ -120,8 +126,18 @@ function App() {
               </div>
             </div>
             <div className="status-dot-wrap">
-              <span className={`status-dot ${apiOk ? "ok" : apiOk === false ? "down" : ""}`} />
-              {apiOk === null ? "connecting" : apiOk ? "api online" : "api offline"}
+              <span
+                className={`status-dot ${
+                  mode === "static" ? "ok" : apiOk ? "ok" : apiOk === false ? "down" : ""
+                }`}
+              />
+              {apiOk === null
+                ? "connecting"
+                : mode === "static"
+                  ? "static demo"
+                  : apiOk
+                    ? "api online"
+                    : "api offline"}
             </div>
           </div>
         </header>
