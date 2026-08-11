@@ -138,45 +138,13 @@ export function FleetOverview({ subset }: { subset: string }) {
       </div>
 
       {comparison && (
-        <div className="panel">
-          <h3 className="bracket-title">
-            <span className="bracket">[</span>
-            <span className="title-text">MODEL COMPARISON — {subset}</span>
-            <span className="bracket">]</span>
-            <InfoTip>
-              Every architecture scored on the same held-out test set against the true,
-              uncapped RUL. Lower NASA score is better — it penalizes late predictions far
-              more than early ones.
-            </InfoTip>
-          </h3>
-          <table className="fleet-table">
-            <thead>
-              <tr>
-                <th>Model</th>
-                <th>RMSE</th>
-                <th>MAE</th>
-                <th>NASA score</th>
-              </tr>
-            </thead>
-            <tbody>
-              {Object.entries(comparison.metrics)
-                .sort(([, a], [, b]) => a.nasa_score - b.nasa_score)
-                .map(([modelType, m]) => (
-                  <tr key={modelType}>
-                    <td className="mono">
-                      {modelType}
-                      {modelType === comparison.champion && (
-                        <span className="champion-tag">champion</span>
-                      )}
-                    </td>
-                    <td className="mono muted">{m.rmse.toFixed(2)}</td>
-                    <td className="mono muted">{m.mae.toFixed(2)}</td>
-                    <td className="mono muted">{m.nasa_score.toFixed(1)}</td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
-        </div>
+        <Link to="/models" className="champion-banner">
+          <span>
+            Served by <span className="mono">{comparison.champion.toUpperCase()}</span> — chosen
+            over {Object.keys(comparison.metrics).length - 1} other models on this subset
+          </span>
+          <span className="champion-banner-cta">VIEW MODEL COMPARISON →</span>
+        </Link>
       )}
 
       <div className="panel">

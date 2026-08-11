@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { HashRouter, Route, Routes } from "react-router-dom";
+import { HashRouter, Link, Route, Routes, useLocation } from "react-router-dom";
 import { api } from "./api";
 import { EngineDetail } from "./pages/EngineDetail";
 import { FleetOverview } from "./pages/FleetOverview";
+import { ModelComparisonPage } from "./pages/ModelComparison";
 
 const ALL_SUBSETS = ["FD001", "FD002", "FD003", "FD004"];
 
@@ -41,8 +42,8 @@ function AboutPanel() {
         <div>
           <h4>Which model?</h4>
           Five architectures (XGBoost, LSTM, TCN, Transformer, Weibull AFT survival) are
-          compared per subset on the NASA PHM08 asymmetric score; the winner is served live
-          and shown as CHAMPION in the comparison table.
+          compared per subset on the NASA PHM08 asymmetric score; the winner is served live.
+          See the model comparison page for the grounding and limitations behind each one.
         </div>
         <div>
           <h4>The interval</h4>
@@ -52,6 +53,18 @@ function AboutPanel() {
         </div>
       </div>
     </div>
+  );
+}
+
+function HeaderNav() {
+  const location = useLocation();
+  return (
+    <Link
+      to="/models"
+      className={`header-btn ${location.pathname === "/models" ? "active" : ""}`}
+    >
+      Models
+    </Link>
   );
 }
 
@@ -82,6 +95,7 @@ function App() {
             <span className="brand-sub">// Fleet Health Console</span>
           </div>
           <div className="header-right">
+            <HeaderNav />
             <button
               type="button"
               className={`header-btn ${aboutOpen ? "active" : ""}`}
@@ -118,6 +132,7 @@ function App() {
           <Routes>
             <Route path="/" element={<FleetOverview subset={subset} />} />
             <Route path="/engine/:unitNumber" element={<EngineDetail subset={subset} />} />
+            <Route path="/models" element={<ModelComparisonPage subset={subset} />} />
           </Routes>
         </main>
       </div>
