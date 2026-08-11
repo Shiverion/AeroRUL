@@ -10,6 +10,8 @@ import {
   YAxis,
 } from "recharts";
 import { api, type EngineHistory } from "../api";
+import { InfoTip } from "../components/InfoTip";
+import { MultiSelect } from "../components/MultiSelect";
 import { RiskBadge } from "../components/RiskBadge";
 
 const SENSOR_LABELS: Record<string, string> = {
@@ -30,6 +32,20 @@ const SENSOR_LABELS: Record<string, string> = {
 };
 
 const DEFAULT_SENSORS = ["s_4", "s_11", "s_9"];
+const CHART_COLORS = ["#ff2a2a", "#eaeaea", "#4af626", "#8a8a8a"];
+
+function EngineDetailSkeleton({ unitNumber }: { unitNumber?: string }) {
+  return (
+    <div className="panel">
+      <p className="muted mono">LOADING ENGINE #{unitNumber}…</p>
+      <div className="skeleton-block" style={{ marginTop: 12 }}>
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="skeleton-row" style={{ width: `${88 - i * 10}%` }} />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export function EngineDetail({ subset }: { subset: string }) {
   const { unitNumber } = useParams<{ unitNumber: string }>();
@@ -50,14 +66,14 @@ export function EngineDetail({ subset }: { subset: string }) {
   if (error) {
     return (
       <div className="panel error-panel">
-        <p>Could not load engine #{unitNumber}: {error}</p>
-        <Link to="/">← Back to fleet</Link>
+        <p>Engine #{unitNumber} request failed: {error}</p>
+        <Link to="/" className="back-link">&larr; Back to fleet</Link>
       </div>
     );
   }
 
   if (!engine) {
-    return <div className="panel">Loading engine #{unitNumber}…</div>;
+    return <EngineDetailSkeleton unitNumber={unitNumber} />;
   }
 
   const chartData = engine.cycles.map((cycle, i) => {
@@ -69,21 +85,29 @@ export function EngineDetail({ subset }: { subset: string }) {
   });
 
   const availableSensors = Object.keys(engine.sensors).filter((s) => s in SENSOR_LABELS);
-  const colors = ["#5fd0ff", "#ff9f5f", "#a1ff5f"];
+  const sensorOptions = availableSensors.map((s, i) => ({
+    value: s,
+    label: `${s} — ${SENSOR_LABELS[s]}`,
+    color: CHART_COLORS[i % CHART_COLORS.length],
+  }));
 
   return (
     <div>
-      <Link to="/" className="back-link">← Back to fleet</Link>
+      <Link to="/" className="back-link">
+        &larr; Back to fleet
+      </Link>
 
       <div className="panel engine-summary">
         <div>
           <h2>Engine #{engine.unit_number}</h2>
-          <p className="muted">{engine.subset} · {engine.cycles.length} cycles observed</p>
+          <p className="muted">
+            {engine.subset} // {engine.cycles.length} cycles observed
+          </p>
         </div>
         <div className="engine-summary-stats">
           <div>
             <span className="stat-value">{engine.predicted_rul.toFixed(1)}</span>
-            <span className="stat-label">predicted RUL</span>
+            <span className="stat-label">predicted rul</span>
           </div>
           <div>
             <span className="stat-value">
@@ -91,15 +115,27 @@ export function EngineDetail({ subset }: { subset: string }) {
                 ? `${engine.predicted_rul_lower.toFixed(0)}–${engine.predicted_rul_upper.toFixed(0)}`
                 : "—"}
             </span>
-            <span className="stat-label">90% interval</span>
+            <span className="stat-label">
+              90% interval
+              <InfoTip>
+                Split conformal prediction interval — the true RUL falls inside this range
+                roughly 90% of the time, calibrated on held-out engines.
+              </InfoTip>
+            </span>
           </div>
           <div>
             <span className="stat-value">{engine.true_rul ?? "—"}</span>
-            <span className="stat-label">true RUL</span>
+            <span className="stat-label">true rul</span>
           </div>
           <div>
             <span className="stat-value mono-small">{engine.model_used}</span>
-            <span className="stat-label">model</span>
+            <span className="stat-label">
+              model
+              <InfoTip>
+                The champion model for this subset — the architecture that scored lowest on
+                NASA score across XGBoost, LSTM, TCN, Transformer, and survival analysis.
+              </InfoTip>
+            </span>
           </div>
           <RiskBadge tier={engine.risk_tier} />
         </div>
@@ -107,41 +143,49 @@ export function EngineDetail({ subset }: { subset: string }) {
       </div>
 
       <div className="panel">
-        <div className="sensor-picker">
-          {availableSensors.map((s) => (
-            <label key={s} className="sensor-checkbox">
-              <input
-                type="checkbox"
-                checked={selectedSensors.includes(s)}
-                onChange={(e) => {
-                  setSelectedSensors((prev) =>
-                    e.target.checked ? [...prev, s] : prev.filter((x) => x !== s)
-                  );
-                }}
-              />
-              {s} — {SENSOR_LABELS[s]}
-            </label>
-          ))}
-        </div>
+        <h3 className="bracket-title">
+          <span className="bracket">[</span>
+          <span className="title-text">SENSOR HISTORY</span>
+          <span className="bracket">]</span>
+        </h3>
+
+        <MultiSelect
+          label="SENSORS"
+          options={sensorOptions}
+          selected={selectedSensors}
+          onChange={setSelectedSensors}
+        />
 
         <ResponsiveContainer width="100%" height={360}>
           <LineChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#2a3444" />
-            <XAxis dataKey="cycle" stroke="#8b98ab" label={{ value: "cycle", position: "insideBottom", offset: -4, fill: "#8b98ab" }} />
-            <YAxis stroke="#8b98ab" />
-            <Tooltip
-              contentStyle={{ background: "#151b26", border: "1px solid #2a3444", borderRadius: 8 }}
-              labelStyle={{ color: "#e7ecf3" }}
+            <CartesianGrid strokeDasharray="2 3" stroke="#2a2a2a" />
+            <XAxis
+              dataKey="cycle"
+              stroke="#5c5c5c"
+              tick={{ fill: "#8a8a8a", fontSize: 11, fontFamily: "JetBrains Mono, monospace" }}
+              label={{ value: "CYCLE", position: "insideBottom", offset: -4, fill: "#5c5c5c", fontSize: 11 }}
             />
-            {selectedSensors.map((s, i) => (
+            <YAxis stroke="#5c5c5c" tick={{ fill: "#8a8a8a", fontSize: 11, fontFamily: "JetBrains Mono, monospace" }} />
+            <Tooltip
+              contentStyle={{
+                background: "#0a0a0a",
+                border: "1px solid #444444",
+                borderRadius: 0,
+                fontFamily: "JetBrains Mono, monospace",
+                fontSize: 12,
+              }}
+              labelStyle={{ color: "#eaeaea" }}
+            />
+            {selectedSensors.map((s) => (
               <Line
                 key={s}
                 type="monotone"
                 dataKey={s}
                 name={`${s} — ${SENSOR_LABELS[s] ?? s}`}
-                stroke={colors[i % colors.length]}
+                stroke={CHART_COLORS[availableSensors.indexOf(s) % CHART_COLORS.length]}
                 dot={false}
-                strokeWidth={2}
+                strokeWidth={1.75}
+                isAnimationActive={false}
               />
             ))}
           </LineChart>
