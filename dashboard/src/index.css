@@ -147,53 +147,64 @@ input {
   color: var(--red);
 }
 
-/* ---------- custom select (subset switcher) ---------- */
+/* ---------- subset switcher (button group) ---------- */
 
-.select-wrap {
-  position: relative;
+.subset-group {
   display: inline-flex;
   align-items: center;
+  gap: 8px;
   border: 1px solid var(--border);
   background: var(--bg);
-  padding: 0 8px 0 10px;
+  padding: 0 8px;
 }
 
-.select-wrap::before {
-  content: "SUBSET";
+.subset-group-label {
   font-size: 10px;
   color: var(--fg-dimmer);
   letter-spacing: 0.08em;
-  margin-right: 8px;
 }
 
-.select-wrap::after {
-  content: "▾";
-  color: var(--fg-dim);
-  font-size: 10px;
-  pointer-events: none;
-  margin-left: -18px;
+.subset-buttons {
+  display: flex;
 }
 
-.native-select {
-  appearance: none;
+.subset-btn {
   background: transparent;
   border: none;
-  color: var(--fg);
+  border-left: 1px solid var(--border);
+  color: var(--fg-dim);
   font-family: var(--mono);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.04em;
-  padding: 7px 22px 7px 0;
+  padding: 7px 10px;
   cursor: pointer;
+  transition: color 150ms ease, background-color 150ms ease;
 }
 
-.native-select:focus-visible {
-  outline: 1px solid var(--red);
-  outline-offset: 2px;
+.subset-btn:first-child {
+  border-left: none;
 }
 
-.native-select option:disabled {
+.subset-btn:hover:not(:disabled) {
+  color: var(--fg);
+  background: var(--surface-2);
+}
+
+.subset-btn.active {
+  color: var(--red);
+  background: var(--surface-2);
+}
+
+.subset-btn:disabled {
   color: var(--fg-dimmer);
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.subset-btn:focus-visible {
+  outline: 1px solid var(--red);
+  outline-offset: -1px;
 }
 
 /* ---------- status dot ---------- */

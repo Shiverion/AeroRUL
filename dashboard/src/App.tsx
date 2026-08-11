@@ -89,18 +89,21 @@ function App() {
             >
               {aboutOpen ? "✕ Close" : "? About"}
             </button>
-            <div className="select-wrap">
-              <select
-                className="native-select"
-                value={subset}
-                onChange={(e) => setSubset(e.target.value)}
-              >
+            <div className="subset-group">
+              <span className="subset-group-label">SUBSET</span>
+              <div className="subset-buttons">
                 {ALL_SUBSETS.map((s) => (
-                  <option key={s} value={s} disabled={!availableSubsets.includes(s)}>
+                  <button
+                    key={s}
+                    type="button"
+                    className={`subset-btn ${s === subset ? "active" : ""}`}
+                    disabled={!availableSubsets.includes(s)}
+                    onClick={() => setSubset(s)}
+                  >
                     {s}
-                  </option>
+                  </button>
                 ))}
-              </select>
+              </div>
             </div>
             <div className="status-dot-wrap">
               <span className={`status-dot ${apiOk ? "ok" : apiOk === false ? "down" : ""}`} />
