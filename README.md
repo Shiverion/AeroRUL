@@ -3,8 +3,13 @@
 A predictive-maintenance system for jet engines, built end-to-end: raw sensor telemetry in,
 a maintenance recommendation out.
 
-```
-Raw Sensor Data -> Health Indicator -> RUL Prediction -> Failure Risk -> Maintenance Recommendation -> API / Dashboard
+```mermaid
+flowchart TD
+    Raw["Raw Sensor Data"] --> Health["Health Indicator"]
+    Health --> Rul["RUL Prediction"]
+    Rul --> Risk["Failure Risk"]
+    Risk --> Recommendation["Maintenance Recommendation"]
+    Recommendation --> Output["API / Dashboard"]
 ```
 
 > "Engine #37 has approximately 24 cycles remaining before failure — ground for inspection."
@@ -164,23 +169,79 @@ The Architecture section above maps the code layout. This section covers require
 
 ### Lifecycle
 
-```text
- CMAPSS raw ─► build_features (condition clustering, per-condition normalization,
-               rolling windows, health indicator) ─► FittedPipeline (persisted)
-     │
-     ├─► train.py / train_sequence.py / train_survival.py   (MLflow-tracked runs)
-     │        XGBoost · LSTM · TCN · Transformer · Weibull AFT
-     ├─► compare_models.py ─► models_store/champion.json   (champion per subset by NASA score)
-     ├─► calibrate_uncertainty.py ─► <subset>_conformal.joblib
-     └─► export_static_data.py ─► dashboard/public/data/*.json  (~700 per-engine snapshots)
+Training and artifact lifecycle:
 
- Serving
-   FastAPI ModelRegistry ─ lazy-loads champion + conformal per subset on first request
-      POST /predict              raw readings → FittedPipeline.transform → model → interval → decision
-      GET  /fleet/{subset}       last-cycle prediction + interval for every engine
-      GET  /engine/{subset}/{id} full history for one engine
-      GET  /models/{subset}      champion metadata and metrics
-   Dashboard (React) ─ VITE_API_BASE set → live API; unset → static JSON snapshots
+```mermaid
+flowchart TD
+    subgraph Features["Feature pipeline"]
+        Raw["CMAPSS raw"] --> Build["build_features<br/>condition clustering and normalization<br/>windows and health indicator"]
+        Build --> Pipeline[("FittedPipeline<br/>persisted")]
+    end
+
+    subgraph Training["Model training"]
+        Pipeline --> Train["train.py / train_sequence.py<br/>train_survival.py"]
+        Train --> Models["XGBoost · LSTM · TCN<br/>Transformer · Weibull AFT"]
+        Train --> Tracking["MLflow-tracked runs"]
+    end
+
+    subgraph Artifacts["Selection and artifacts"]
+        Pipeline --> Compare["compare_models.py"]
+        Compare --> Champion[("models_store/champion.json<br/>champion per subset")]
+
+        Pipeline --> Calibrate["calibrate_uncertainty.py"]
+        Calibrate --> Conformal[("Conformal joblib<br/>per subset")]
+
+        Pipeline --> Export["export_static_data.py"]
+        Export --> Snapshots[("dashboard/public/data/*.json<br/>~700 engine snapshots")]
+    end
+```
+
+Serving and dashboard paths:
+
+```mermaid
+flowchart TD
+    subgraph Stored["Per-subset artifacts"]
+        Champion[("champion.json")]
+        Conformal[("Conformal joblib")]
+    end
+
+    subgraph Api["FastAPI"]
+        Registry["ModelRegistry<br/>lazy load per subset"]
+
+        Predict["POST /predict<br/>raw readings"]
+        Fleet["GET /fleet/{subset}<br/>fleet prediction intervals"]
+        Engine["GET /engine/{subset}/{id}<br/>one engine history"]
+        Metadata["GET /models/{subset}<br/>champion metrics"]
+
+        Shared["Shared prediction path"]
+        Transform["FittedPipeline.transform"]
+        Model["Champion model"]
+        Interval["Prediction interval"]
+        Decision["Maintenance decision"]
+
+        Predict --> Shared
+        Fleet --> Shared
+        Engine --> Shared
+        Shared --> Transform
+        Transform --> Model
+        Model --> Interval
+        Interval --> Decision
+        Metadata --> Registry
+    end
+
+    subgraph Client["React dashboard"]
+        Dashboard["Dashboard"] --> Mode{"VITE_API_BASE set?"}
+        Mode -->|Set| Live["Live API mode"]
+        Mode -->|Unset| Static[("Static JSON snapshots")]
+    end
+
+    Champion --> Registry
+    Conformal --> Registry
+    Registry --> Shared
+
+    Live --> Fleet
+    Live --> Engine
+    Live --> Metadata
 ```
 
 ### Decision Layer
