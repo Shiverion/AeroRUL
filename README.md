@@ -146,6 +146,69 @@ request, then dispatches every prediction — whether from `/predict` (raw senso
 same feature pipeline the model was trained with (`FittedPipeline.transform`), so training-
 and inference-time features are guaranteed to match.
 
+## System Design
+
+The Architecture section above maps the code layout. This section covers requirements, the training-to-serving lifecycle, the API contract, and trade-offs.
+
+### Requirements
+
+**Functional**
+- Turn raw engine sensor telemetry into RUL, an uncertainty interval, a risk tier, and a maintenance recommendation.
+- Serve fleet-level views, per-engine history, and model metadata to a dashboard; support live prediction on arbitrary readings.
+
+**Non-functional**
+- **Asymmetric safety**: late predictions are penalized more heavily (NASA PHM08 score), so model selection uses that score, not only RMSE.
+- **Train/serve parity**: inference must apply exactly the fitted feature pipeline used in training.
+- **Calibrated trust**: intervals carry a finite-sample coverage guarantee (split conformal).
+- **Cheap hosting**: the dashboard must work on a static host with no backend.
+
+### Lifecycle
+
+```text
+ CMAPSS raw ─► build_features (condition clustering, per-condition normalization,
+               rolling windows, health indicator) ─► FittedPipeline (persisted)
+     │
+     ├─► train.py / train_sequence.py / train_survival.py   (MLflow-tracked runs)
+     │        XGBoost · LSTM · TCN · Transformer · Weibull AFT
+     ├─► compare_models.py ─► models_store/champion.json   (champion per subset by NASA score)
+     ├─► calibrate_uncertainty.py ─► <subset>_conformal.joblib
+     └─► export_static_data.py ─► dashboard/public/data/*.json  (~700 per-engine snapshots)
+
+ Serving
+   FastAPI ModelRegistry ─ lazy-loads champion + conformal per subset on first request
+      POST /predict              raw readings → FittedPipeline.transform → model → interval → decision
+      GET  /fleet/{subset}       last-cycle prediction + interval for every engine
+      GET  /engine/{subset}/{id} full history for one engine
+      GET  /models/{subset}      champion metadata and metrics
+   Dashboard (React) ─ VITE_API_BASE set → live API; unset → static JSON snapshots
+```
+
+### Decision Layer
+
+`models/decision.py` maps predicted cycles remaining to `critical`, `high`, `medium`, or `low` tiers. The thresholds are set relative to the training RUL cap (125), and each tier carries a fixed recommendation (for example, "ground engine for inspection"). Keeping this mapping in code, outside the model, lets operations tune thresholds without retraining.
+
+### Scale and Reliability
+
+- Inference is CPU-only and stateless after model load. Horizontal scaling is a matter of container replicas; cold start is dominated by lazy model loading.
+- Model artefacts and raw data are baked into the API image, so a deployment needs no external volumes.
+- The static dashboard has no runtime dependencies. Per-engine JSON files keep the fleet view from loading every engine's full history at once.
+
+### Trade-offs
+
+| Decision | Benefit | Cost |
+| --- | --- | --- |
+| Champion per subset, chosen by NASA score | Best model for each operating regime | Several models to maintain and serve |
+| Global split-conformal interval | Simple, guaranteed marginal coverage | Under-covers harder subsets (FD002/FD004) |
+| Static snapshot mode | Free hosting, zero backend | Snapshots go stale until regenerated after retraining |
+| Artefacts baked into the image | Self-contained deploys | Image rebuild needed for every model update |
+
+### What to Revisit as It Grows
+
+- Move artefacts to an MLflow model registry (or object storage) and load by version, so models can be promoted without rebuilding images.
+- Add conditional conformal intervals per operating condition or risk tier.
+- Add data-drift monitoring on incoming sensor distributions and a scheduled retraining trigger.
+- Support streaming ingestion (Kafka or MQTT) for live fleets instead of the fixed test set.
+
 ## Skills demonstrated
 
 | Area | Where |
